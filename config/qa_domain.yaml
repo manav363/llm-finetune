@@ -1,0 +1,35 @@
+# Domain Q&A fine-tuning config.
+# The `backend` field is the single switch that decides where training runs:
+#   mock -> no training, writes a marker adapter (offline dry-run / CI)
+#   cuda -> QLoRA via transformers+peft+bitsandbytes  (needs an NVIDIA GPU)
+#   mlx  -> LoRA via mlx-lm                            (needs Apple Silicon)
+seed: 42
+backend: mock
+
+model:
+  name: Qwen/Qwen2.5-3B-Instruct
+  max_seq_len: 1024
+
+data:
+  raw_path: data/sample/domain_qa.jsonl
+  processed_path: data/processed/domain_qa.jsonl
+  splits_dir: data/processed/splits
+  val_frac: 0.15
+  test_frac: 0.15
+
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj]
+
+train:
+  epochs: 3
+  batch_size: 4
+  grad_accum: 4
+  learning_rate: 0.0002
+  output_dir: outputs/adapter
+
+wandb:
+  enabled: false
+  project: llm-finetune

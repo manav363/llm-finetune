@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Project outputs / data (keep sample, ignore generated)
+outputs/
+data/raw/
+data/processed/
+!data/sample/
+
+# Model weights / adapters
+*.safetensors
+*.gguf
+*.bin
+
+# Experiment tracking
+wandb/
+
+# Env / secrets
+.env
+
+# Tooling / session state
+.claude-flow/
+.DS_Store

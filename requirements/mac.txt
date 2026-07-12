@@ -1,0 +1,7 @@
+# Apple Silicon backend: LoRA fine-tuning via MLX (no bitsandbytes / CUDA).
+# Install on an M-series Mac:  pip install -r requirements/mac.txt
+-r base.txt
+
+mlx>=0.15
+mlx-lm>=0.16
+# Quantized GGUF export/serving on Mac is handled via llama.cpp (external tool).

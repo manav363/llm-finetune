@@ -1,0 +1,37 @@
+[project]
+name = "llm-finetune"
+version = "0.1.0"
+description = "Domain-Q&A LoRA/QLoRA fine-tuning pipeline with a swappable CUDA/MLX backend and eval-driven promotion."
+requires-python = ">=3.10"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+src = ["src", "tests"]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.10"
+packages = ["llm_finetune"]
+mypy_path = "src"
+strict = true
+warn_unused_ignores = true
+
+# Optional backend deps (installed only via requirements/cuda.txt or mac.txt).
+# They are imported behind runtime guards, so missing stubs are expected.
+[[tool.mypy.overrides]]
+module = ["torch", "transformers", "peft", "trl", "bitsandbytes", "mlx.*", "mlx_lm", "datasets"]
+ignore_missing_imports = true

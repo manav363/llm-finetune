@@ -1,0 +1,10 @@
+# Backend-agnostic deps — enough to run data prep, split, config, and the
+# mock-backend dry-run offline with no GPU and no model downloads.
+pyyaml>=6.0
+datasets>=2.16
+
+# Dev / quality
+pytest>=8.0
+ruff>=0.5
+mypy>=1.10
+types-PyYAML>=6.0

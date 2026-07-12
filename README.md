@@ -1,0 +1,80 @@
+# LLM Fine-Tune — Domain Q&A
+
+Fine-tune an open-source LLM on a custom **domain Q&A** dataset with parameter-efficient
+**LoRA / QLoRA**, then **prove it beat the base model** on a held-out test set — the fine-tune
+is the treatment, evaluation is the trial.
+
+> Project #2 of a 7-project AI build sequence (Eval → **Fine-Tune** → Knowledge Graph →
+> Secure RAG → Agent+Audit → Multi-Agent → Research Team). It's designed to be scored by the
+> AI Eval Pipeline (Project #1) so "the fine-tune improved quality" is a statistical claim with
+> a confidence interval, not a gut call.
+
+## Status: M0 — scaffold ✅
+
+The full pipeline runs **offline** on a bundled sample dataset via a **mock backend** — no GPU,
+no model download. Real training (QLoRA on CUDA / LoRA on Apple Silicon via MLX) lands in M2.
+
+## The one switch that matters: `backend`
+
+Compute is undecided, so the training backend is a single config field, not a rewrite:
+
+| `backend` | Where it runs | Stack |
+|-----------|---------------|-------|
+| `mock` | anywhere, offline | writes a marker adapter — used for the dry-run and CI |
+| `cuda` | NVIDIA GPU | `transformers` + `peft` + `bitsandbytes` (QLoRA 4-bit) + `trl` |
+| `mlx`  | Apple Silicon | `mlx-lm` LoRA |
+
+Data prep, splitting, evaluation, and serving are all backend-agnostic.
+
+## Quickstart
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements/base.txt      # backend-agnostic + dev tools
+pip install -e .
+
+# Run the full pipeline offline (prepare -> split -> mock train)
+python -m llm_finetune.pipeline --config config/qa_domain.yaml
+
+# Quality gate
+pytest && ruff check . && mypy src
+```
+
+For real training, also install one backend's extras:
+
+```bash
+pip install -r requirements/cuda.txt      # on an NVIDIA GPU box
+# or
+pip install -r requirements/mac.txt       # on an M-series Mac
+```
+
+...then set `backend: cuda` (or `mlx`) in `config/qa_domain.yaml`.
+
+## Layout
+
+```
+config/qa_domain.yaml        # model, data, LoRA params, and the backend switch
+data/sample/domain_qa.jsonl  # 20-item synthetic domain-QA set (runs cold)
+src/llm_finetune/
+  config.py                  # typed, validated config loaded from YAML
+  schema.py                  # QAExample + strict validation + chat formatting
+  data/prepare.py            # clean + dedup -> processed JSONL
+  data/split.py              # seeded, leak-safe train/val/test split
+  train/backend_base.py      # TrainBackend contract (the swappable seam)
+  train/backend_mock.py      # offline dry-run backend
+  train/backend_cuda.py      # QLoRA backend (interface + guard; loop in M2)
+  train/backend_mlx.py       # MLX LoRA backend (interface + guard; loop in M2)
+  train/train.py             # backend dispatcher
+  pipeline.py                # prepare -> split -> train entrypoint
+tests/                       # config, schema, data pipeline, dry-run acceptance
+```
+
+## Roadmap
+
+- **M0 — Scaffold** ✅ config, schema, data prep/split, backend abstraction, offline dry-run, tests.
+- **M1 — Data pipeline** near-duplicate detection, richer cleaning, dataset stats.
+- **M2 — Fine-tuning** real QLoRA (cuda) and LoRA (mlx) training loops.
+- **M3 — Evaluation** base vs fine-tuned on held-out test via the AI Eval Pipeline (paired bootstrap + p-value).
+- **M4 — Optimize/export** merge LoRA, quantize to GGUF.
+- **M5 — Serving** FastAPI endpoint (vLLM/TGI on CUDA, MLX/llama.cpp on Mac) + Docker.
+- **M6 — Reproducibility** model card, run registry, eval-as-CI gate.

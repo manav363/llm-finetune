@@ -1,0 +1,11 @@
+# NVIDIA CUDA backend: QLoRA (4-bit) fine-tuning + high-throughput serving.
+# Install on a machine with a CUDA GPU:  pip install -r requirements/cuda.txt
+-r base.txt
+
+torch>=2.2
+transformers>=4.44
+peft>=0.12
+trl>=0.9
+accelerate>=0.33
+bitsandbytes>=0.43
+# Serving (optional): vllm  /  text-generation-inference
