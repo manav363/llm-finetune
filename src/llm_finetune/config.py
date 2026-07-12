@@ -54,6 +54,7 @@ class TrainConfig:
     grad_accum: int
     learning_rate: float
     output_dir: Path
+    max_steps: int = 0  # 0 = run full epochs; >0 caps steps (smoke runs)
 
 
 @dataclass(frozen=True)
@@ -139,6 +140,7 @@ def parse_config(raw: dict[str, Any]) -> Config:
             grad_accum=int(_require(train_raw, "grad_accum", "train")),
             learning_rate=float(_require(train_raw, "learning_rate", "train")),
             output_dir=Path(_require(train_raw, "output_dir", "train")),
+            max_steps=int(train_raw.get("max_steps", 0)),
         ),
         wandb=WandbConfig(
             enabled=bool(wandb_raw.get("enabled", False)),

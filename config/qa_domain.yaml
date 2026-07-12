@@ -32,6 +32,9 @@ train:
   grad_accum: 4
   learning_rate: 0.0002
   output_dir: outputs/adapter
+  # max_steps: 0 runs full epochs. Set a small value (e.g. 2) for a smoke train
+  # that proves the loop end-to-end without waiting for a full run.
+  max_steps: 0
 
 wandb:
   enabled: false

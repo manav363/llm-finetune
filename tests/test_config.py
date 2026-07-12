@@ -58,6 +58,16 @@ def test_loads_shipped_config_file():
     assert cfg.model.name
 
 
+def test_max_steps_defaults_to_zero():
+    assert parse_config(_valid_raw()).train.max_steps == 0
+
+
+def test_max_steps_is_read_from_config():
+    raw = _valid_raw()
+    raw["train"]["max_steps"] = 2
+    assert parse_config(raw).train.max_steps == 2
+
+
 def test_rejects_unknown_backend():
     raw = _valid_raw()
     raw["backend"] = "tpu"

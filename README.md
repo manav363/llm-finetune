@@ -9,12 +9,14 @@ is the treatment, evaluation is the trial.
 > AI Eval Pipeline (Project #1) so "the fine-tune improved quality" is a statistical claim with
 > a confidence interval, not a gut call.
 
-## Status: M1 — data pipeline ✅ (M0 scaffold ✅)
+## Status: M2 — fine-tuning ✅ (M0 scaffold ✅ · M1 data pipeline ✅)
 
 The full pipeline runs **offline** on a bundled sample dataset via a **mock backend** — no GPU,
-no model download. Data prep now does lexical near-duplicate removal and emits a stats report
-(counts, length distribution, category balance). Real training (QLoRA on CUDA / LoRA on Apple
-Silicon via MLX) lands in M2.
+no model download. Data prep does lexical near-duplicate removal and emits a stats report
+(counts, length distribution, category balance). Real training is implemented on both backends:
+**QLoRA (4-bit) on CUDA** via `trl` and **LoRA on Apple Silicon** via `mlx-lm`. A smoke train
+of Qwen2.5-3B on the sample produced a real MLX LoRA adapter (`adapters.safetensors` + a
+`run.json` reproducibility record).
 
 ## The one switch that matters: `backend`
 
@@ -64,9 +66,10 @@ src/llm_finetune/
   data/split.py              # seeded, leak-safe train/val/test split
   data/stats.py              # dataset stats: counts, length dist, category balance
   train/backend_base.py      # TrainBackend contract (the swappable seam)
+  train/backend_common.py    # shared seeding, chat formatting, run metadata
   train/backend_mock.py      # offline dry-run backend
-  train/backend_cuda.py      # QLoRA backend (interface + guard; loop in M2)
-  train/backend_mlx.py       # MLX LoRA backend (interface + guard; loop in M2)
+  train/backend_cuda.py      # QLoRA (4-bit) via trl SFT + peft
+  train/backend_mlx.py       # MLX LoRA via mlx-lm
   train/train.py             # backend dispatcher
   pipeline.py                # prepare -> split -> train entrypoint
 tests/                       # config, schema, data pipeline, dry-run acceptance
@@ -76,7 +79,7 @@ tests/                       # config, schema, data pipeline, dry-run acceptance
 
 - **M0 — Scaffold** ✅ config, schema, data prep/split, backend abstraction, offline dry-run, tests.
 - **M1 — Data pipeline** ✅ lexical near-duplicate detection, category-aware records, dataset stats report.
-- **M2 — Fine-tuning** real QLoRA (cuda) and LoRA (mlx) training loops.
+- **M2 — Fine-tuning** ✅ real QLoRA (cuda, trl) and LoRA (mlx-lm) loops; seeded + versioned `run.json`; MLX smoke train produced a real adapter.
 - **M3 — Evaluation** base vs fine-tuned on held-out test via the AI Eval Pipeline (paired bootstrap + p-value).
 - **M4 — Optimize/export** merge LoRA, quantize to GGUF.
 - **M5 — Serving** FastAPI endpoint (vLLM/TGI on CUDA, MLX/llama.cpp on Mac) + Docker.
