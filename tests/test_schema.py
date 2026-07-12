@@ -23,6 +23,28 @@ def test_from_raw_rejects_missing_field():
         QAExample.from_raw({"id": "a1", "question": "q"})
 
 
+def test_from_raw_parses_optional_category():
+    ex = QAExample.from_raw(
+        {"id": "a1", "question": "q", "answer": "a", "category": " security "}
+    )
+    assert ex.category == "security"
+
+
+def test_from_raw_defaults_category_to_empty():
+    ex = QAExample.from_raw({"id": "a1", "question": "q", "answer": "a"})
+    assert ex.category == ""
+
+
+def test_from_raw_rejects_non_string_category():
+    with pytest.raises(SchemaError):
+        QAExample.from_raw({"id": "a1", "question": "q", "answer": "a", "category": 3})
+
+
+def test_to_dict_roundtrips_category():
+    ex = QAExample(id="a1", question="q", answer="a", category="api")
+    assert QAExample.from_raw(ex.to_dict()).category == "api"
+
+
 def test_to_chat_includes_context_and_roles():
     ex = QAExample(id="a1", question="What?", answer="This.", context="Some ctx.")
     chat = ex.to_chat()
@@ -36,6 +58,7 @@ def test_load_sample_dataset_is_valid_and_unique():
     examples = load_jsonl("data/sample/domain_qa.jsonl")
     assert len(examples) == 20
     assert len({e.id for e in examples}) == 20
+    assert all(e.category for e in examples)  # every sample row is labeled
 
 
 def test_load_jsonl_rejects_duplicate_ids(tmp_path):

@@ -27,6 +27,7 @@ class QAExample:
     question: str
     answer: str
     context: str = ""
+    category: str = ""
 
     @staticmethod
     def from_raw(raw: dict[str, Any]) -> QAExample:
@@ -41,11 +42,16 @@ class QAExample:
         if not isinstance(context, str):
             raise SchemaError(f"field 'context' must be a string: {raw!r}")
 
+        category = raw.get("category", "")
+        if not isinstance(category, str):
+            raise SchemaError(f"field 'category' must be a string: {raw!r}")
+
         return QAExample(
             id=raw["id"].strip(),
             question=raw["question"].strip(),
             answer=raw["answer"].strip(),
             context=context.strip(),
+            category=category.strip(),
         )
 
     def to_dict(self) -> dict[str, str]:
@@ -54,6 +60,7 @@ class QAExample:
             "question": self.question,
             "context": self.context,
             "answer": self.answer,
+            "category": self.category,
         }
 
     def to_chat(self) -> list[dict[str, str]]:

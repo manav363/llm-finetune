@@ -32,6 +32,7 @@ class DataConfig:
     splits_dir: Path
     val_frac: float
     test_frac: float
+    near_dup_threshold: float = 0.85
 
     @property
     def train_frac(self) -> float:
@@ -107,6 +108,10 @@ def parse_config(raw: dict[str, Any]) -> Config:
     if val_frac + test_frac >= 1.0:
         raise ConfigError("data.val_frac + data.test_frac must be < 1.0 (need a train split)")
 
+    near_dup_threshold = float(data_raw.get("near_dup_threshold", 0.85))
+    if not 0.0 < near_dup_threshold <= 1.0:
+        raise ConfigError("data.near_dup_threshold must be in (0, 1]")
+
     return Config(
         seed=int(_require(raw, "seed", "<root>")),
         backend=str(backend),
@@ -120,6 +125,7 @@ def parse_config(raw: dict[str, Any]) -> Config:
             splits_dir=Path(_require(data_raw, "splits_dir", "data")),
             val_frac=val_frac,
             test_frac=test_frac,
+            near_dup_threshold=near_dup_threshold,
         ),
         lora=LoraConfig(
             r=int(_require(lora_raw, "r", "lora")),

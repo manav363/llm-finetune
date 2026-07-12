@@ -9,10 +9,12 @@ is the treatment, evaluation is the trial.
 > AI Eval Pipeline (Project #1) so "the fine-tune improved quality" is a statistical claim with
 > a confidence interval, not a gut call.
 
-## Status: M0 — scaffold ✅
+## Status: M1 — data pipeline ✅ (M0 scaffold ✅)
 
 The full pipeline runs **offline** on a bundled sample dataset via a **mock backend** — no GPU,
-no model download. Real training (QLoRA on CUDA / LoRA on Apple Silicon via MLX) lands in M2.
+no model download. Data prep now does lexical near-duplicate removal and emits a stats report
+(counts, length distribution, category balance). Real training (QLoRA on CUDA / LoRA on Apple
+Silicon via MLX) lands in M2.
 
 ## The one switch that matters: `backend`
 
@@ -58,8 +60,9 @@ data/sample/domain_qa.jsonl  # 20-item synthetic domain-QA set (runs cold)
 src/llm_finetune/
   config.py                  # typed, validated config loaded from YAML
   schema.py                  # QAExample + strict validation + chat formatting
-  data/prepare.py            # clean + dedup -> processed JSONL
+  data/prepare.py            # clean + exact/near dedup -> processed JSONL
   data/split.py              # seeded, leak-safe train/val/test split
+  data/stats.py              # dataset stats: counts, length dist, category balance
   train/backend_base.py      # TrainBackend contract (the swappable seam)
   train/backend_mock.py      # offline dry-run backend
   train/backend_cuda.py      # QLoRA backend (interface + guard; loop in M2)
@@ -72,7 +75,7 @@ tests/                       # config, schema, data pipeline, dry-run acceptance
 ## Roadmap
 
 - **M0 — Scaffold** ✅ config, schema, data prep/split, backend abstraction, offline dry-run, tests.
-- **M1 — Data pipeline** near-duplicate detection, richer cleaning, dataset stats.
+- **M1 — Data pipeline** ✅ lexical near-duplicate detection, category-aware records, dataset stats report.
 - **M2 — Fine-tuning** real QLoRA (cuda) and LoRA (mlx) training loops.
 - **M3 — Evaluation** base vs fine-tuned on held-out test via the AI Eval Pipeline (paired bootstrap + p-value).
 - **M4 — Optimize/export** merge LoRA, quantize to GGUF.

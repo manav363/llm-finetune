@@ -16,6 +16,9 @@ data:
   splits_dir: data/processed/splits
   val_frac: 0.15
   test_frac: 0.15
+  # Lexical near-duplicate threshold (Jaccard over question+answer tokens).
+  # A record is dropped when it is >= this similar to an already-kept record.
+  near_dup_threshold: 0.85
 
 lora:
   r: 16

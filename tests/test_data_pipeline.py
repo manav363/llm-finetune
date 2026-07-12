@@ -1,6 +1,11 @@
 import pytest
 
-from llm_finetune.data.prepare import clean_example, dedup_by_answer, prepare
+from llm_finetune.data.prepare import (
+    clean_example,
+    dedup_by_answer,
+    near_dedup,
+    prepare,
+)
 from llm_finetune.data.split import (
     SplitError,
     assert_no_leakage,
@@ -30,6 +35,44 @@ def test_dedup_by_answer_drops_repeat_pairs():
     ]
     kept = dedup_by_answer(exs)
     assert [e.id for e in kept] == ["1", "3"]
+
+
+def test_clean_example_normalizes_category():
+    original = QAExample(id="x", question="q", answer="a", category="  api ")
+    assert clean_example(original).category == "api"
+
+
+def test_near_dedup_drops_reworded_duplicate():
+    exs = [
+        QAExample(id="1", question="How do I reset my password today", answer="Use the reset link"),
+        # near-identical: one extra token vs the first
+        QAExample(id="2", question="How do I reset my password", answer="Use the reset link"),
+        QAExample(id="3", question="What is the storage limit", answer="It is two gigabytes"),
+    ]
+    kept = near_dedup(exs, threshold=0.85)
+    assert [e.id for e in kept] == ["1", "3"]
+
+
+def test_near_dedup_keeps_distinct_examples():
+    exs = [
+        QAExample(id="1", question="How do I reset my password", answer="Use the reset link"),
+        QAExample(id="2", question="What regions are supported", answer="us-east and eu-west"),
+    ]
+    kept = near_dedup(exs, threshold=0.85)
+    assert [e.id for e in kept] == ["1", "2"]
+
+
+def test_near_dedup_threshold_one_keeps_non_identical():
+    exs = [
+        QAExample(id="1", question="alpha beta gamma", answer="x"),
+        QAExample(id="2", question="alpha beta gamma delta", answer="x"),  # not token-identical
+    ]
+    assert [e.id for e in near_dedup(exs, threshold=1.0)] == ["1", "2"]
+
+
+def test_near_dedup_rejects_out_of_range_threshold():
+    with pytest.raises(ValueError):
+        near_dedup(_examples(2), threshold=0.0)
 
 
 def test_prepare_writes_processed_file(tmp_path):

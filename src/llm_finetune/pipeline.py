@@ -15,13 +15,24 @@ import argparse
 from llm_finetune.config import Config, load_config
 from llm_finetune.data.prepare import prepare
 from llm_finetune.data.split import split_examples, write_splits
+from llm_finetune.data.stats import compute_stats, format_report, write_report
 from llm_finetune.train.backend_base import TrainResult
 from llm_finetune.train.train import run_training
 
 
 def run_pipeline(config: Config) -> TrainResult:
-    """Run prepare -> split -> train and return the training result."""
-    examples = prepare(config.data.raw_path, config.data.processed_path)
+    """Run prepare -> stats -> split -> train and return the training result."""
+    examples = prepare(
+        config.data.raw_path,
+        config.data.processed_path,
+        near_dup_threshold=config.data.near_dup_threshold,
+    )
+    stats = compute_stats(examples)
+    stats_path = config.data.processed_path.parent / "stats.json"
+    write_report(stats, stats_path)
+    print(format_report(stats))
+    print()
+
     splits = split_examples(
         examples,
         val_frac=config.data.val_frac,

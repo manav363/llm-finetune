@@ -34,6 +34,24 @@ def test_parses_valid_config():
     assert cfg.data.train_frac == pytest.approx(0.70)
 
 
+def test_near_dup_threshold_defaults_when_omitted():
+    cfg = parse_config(_valid_raw())
+    assert cfg.data.near_dup_threshold == 0.85
+
+
+def test_near_dup_threshold_is_read_from_config():
+    raw = _valid_raw()
+    raw["data"]["near_dup_threshold"] = 0.7
+    assert parse_config(raw).data.near_dup_threshold == pytest.approx(0.7)
+
+
+def test_rejects_out_of_range_near_dup_threshold():
+    raw = _valid_raw()
+    raw["data"]["near_dup_threshold"] = 1.5
+    with pytest.raises(ConfigError):
+        parse_config(raw)
+
+
 def test_loads_shipped_config_file():
     cfg = load_config("config/qa_domain.yaml")
     assert cfg.backend in ("mock", "cuda", "mlx")
