@@ -1,0 +1,134 @@
+{
+  "n_items": 3,
+  "base_model": "Qwen/Qwen2.5-3B-Instruct",
+  "adapter": "outputs/adapter",
+  "base_generator": "mlx-base",
+  "tuned_generator": "mlx-tuned",
+  "judge": "heuristic-placeholder",
+  "p_value_status": "pending-validated-judge",
+  "headline": {
+    "name": "judge_overall",
+    "base_mean": 0.502330949240814,
+    "tuned_mean": 0.502330949240814,
+    "delta": {
+      "delta": 0.0,
+      "ci_low": 0.0,
+      "ci_high": 0.0,
+      "level": 0.95,
+      "p_value": 0.0,
+      "p_value_status": "pending-validated-judge",
+      "n_items": 3,
+      "n_resamples": 5000
+    }
+  },
+  "intrinsic": [
+    {
+      "name": "exact_match",
+      "base_mean": 0.0,
+      "tuned_mean": 0.0,
+      "delta": {
+        "delta": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.0,
+        "level": 0.95,
+        "p_value": 0.0,
+        "p_value_status": "pending-validated-judge",
+        "n_items": 3,
+        "n_resamples": 5000
+      }
+    },
+    {
+      "name": "normalized_match",
+      "base_mean": 0.0,
+      "tuned_mean": 0.0,
+      "delta": {
+        "delta": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.0,
+        "level": 0.95,
+        "p_value": 0.0,
+        "p_value_status": "pending-validated-judge",
+        "n_items": 3,
+        "n_resamples": 5000
+      }
+    },
+    {
+      "name": "token_f1",
+      "base_mean": 0.4562733275911571,
+      "tuned_mean": 0.4562733275911571,
+      "delta": {
+        "delta": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.0,
+        "level": 0.95,
+        "p_value": 0.0,
+        "p_value_status": "pending-validated-judge",
+        "n_items": 3,
+        "n_resamples": 5000
+      }
+    },
+    {
+      "name": "rouge_l",
+      "base_mean": 0.4562733275911571,
+      "tuned_mean": 0.4562733275911571,
+      "delta": {
+        "delta": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.0,
+        "level": 0.95,
+        "p_value": 0.0,
+        "p_value_status": "pending-validated-judge",
+        "n_items": 3,
+        "n_resamples": 5000
+      }
+    }
+  ],
+  "judged": [
+    {
+      "name": "correctness",
+      "base_mean": 0.4562733275911571,
+      "tuned_mean": 0.4562733275911571,
+      "delta": {
+        "delta": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.0,
+        "level": 0.95,
+        "p_value": 0.0,
+        "p_value_status": "pending-validated-judge",
+        "n_items": 3,
+        "n_resamples": 5000
+      }
+    },
+    {
+      "name": "faithfulness",
+      "base_mean": 0.4462433862433863,
+      "tuned_mean": 0.4462433862433863,
+      "delta": {
+        "delta": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.0,
+        "level": 0.95,
+        "p_value": 0.0,
+        "p_value_status": "pending-validated-judge",
+        "n_items": 3,
+        "n_resamples": 5000
+      }
+    },
+    {
+      "name": "relevance",
+      "base_mean": 0.6044761338878986,
+      "tuned_mean": 0.6044761338878986,
+      "delta": {
+        "delta": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.0,
+        "level": 0.95,
+        "p_value": 0.0,
+        "p_value_status": "pending-validated-judge",
+        "n_items": 3,
+        "n_resamples": 5000
+      }
+    }
+  ],
+  "verdict": "no measurable difference \u2014 CI includes zero; cannot claim the fine-tune beat the base model"
+}

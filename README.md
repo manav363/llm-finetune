@@ -9,14 +9,19 @@ is the treatment, evaluation is the trial.
 > AI Eval Pipeline (Project #1) so "the fine-tune improved quality" is a statistical claim with
 > a confidence interval, not a gut call.
 
-## Status: M2 — fine-tuning ✅ (M0 scaffold ✅ · M1 data pipeline ✅)
+## Status: M3 — evaluation ✅ (M0 ✅ · M1 ✅ · M2 ✅)
 
 The full pipeline runs **offline** on a bundled sample dataset via a **mock backend** — no GPU,
-no model download. Data prep does lexical near-duplicate removal and emits a stats report
-(counts, length distribution, category balance). Real training is implemented on both backends:
-**QLoRA (4-bit) on CUDA** via `trl` and **LoRA on Apple Silicon** via `mlx-lm`. A smoke train
-of Qwen2.5-3B on the sample produced a real MLX LoRA adapter (`adapters.safetensors` + a
-`run.json` reproducibility record).
+no model download. Data prep does lexical near-duplicate removal and emits a stats report.
+Real training is implemented on both backends: **QLoRA (4-bit) on CUDA** via `trl` and **LoRA
+on Apple Silicon** via `mlx-lm` (a smoke train of Qwen2.5-3B produced a real MLX adapter +
+`run.json`). Evaluation compares base vs fine-tuned on the held-out test set with intrinsic
+metrics, a judge (correctness/faithfulness/relevance), and **paired-bootstrap CIs** — and writes
+an **honest report that can say the fine-tune did _not_ win** (`reports/eval_report.md`).
+
+> The judge is currently a lexical **placeholder** for the AI Eval Pipeline's validated judge
+> (Project #1, not built yet); the validated judge + final p-value land when that project's M5
+> does. Deltas and CIs are real; the significance verdict is flagged preliminary until then.
 
 ## The one switch that matters: `backend`
 
@@ -71,6 +76,12 @@ src/llm_finetune/
   train/backend_cuda.py      # QLoRA (4-bit) via trl SFT + peft
   train/backend_mlx.py       # MLX LoRA via mlx-lm
   train/train.py             # backend dispatcher
+  eval/metrics.py            # intrinsic metrics: exact/norm match, token-F1, ROUGE-L
+  eval/generate.py           # base/tuned answer generation (mock · mlx · cuda)
+  eval/judge.py              # correctness/faithfulness/relevance (placeholder judge)
+  eval/bootstrap.py          # paired-bootstrap CI on the quality delta
+  eval/report.py             # base-vs-tuned report (Δ, CI, verdict) -> md + json
+  eval/evaluate.py           # evaluation entrypoint
   pipeline.py                # prepare -> split -> train entrypoint
 tests/                       # config, schema, data pipeline, dry-run acceptance
 ```
@@ -80,7 +91,7 @@ tests/                       # config, schema, data pipeline, dry-run acceptance
 - **M0 — Scaffold** ✅ config, schema, data prep/split, backend abstraction, offline dry-run, tests.
 - **M1 — Data pipeline** ✅ lexical near-duplicate detection, category-aware records, dataset stats report.
 - **M2 — Fine-tuning** ✅ real QLoRA (cuda, trl) and LoRA (mlx-lm) loops; seeded + versioned `run.json`; MLX smoke train produced a real adapter.
-- **M3 — Evaluation** base vs fine-tuned on held-out test via the AI Eval Pipeline (paired bootstrap + p-value).
+- **M3 — Evaluation** ✅ base vs fine-tuned on held-out test: intrinsic metrics + judge + paired-bootstrap CIs; honest committed report (validated judge + p-value pending eval-pipeline M5).
 - **M4 — Optimize/export** merge LoRA, quantize to GGUF.
 - **M5 — Serving** FastAPI endpoint (vLLM/TGI on CUDA, MLX/llama.cpp on Mac) + Docker.
 - **M6 — Reproducibility** model card, run registry, eval-as-CI gate.

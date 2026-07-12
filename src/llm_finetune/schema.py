@@ -63,8 +63,8 @@ class QAExample:
             "category": self.category,
         }
 
-    def to_chat(self) -> list[dict[str, str]]:
-        """Render as chat messages for instruction fine-tuning (SFT)."""
+    def to_prompt_messages(self) -> list[dict[str, str]]:
+        """Render the system + user turns only (no answer) — for inference."""
         if self.context:
             user = f"Context:\n{self.context}\n\nQuestion: {self.question}"
         else:
@@ -72,6 +72,12 @@ class QAExample:
         return [
             {"role": "system", "content": INSTRUCTION_SYSTEM},
             {"role": "user", "content": user},
+        ]
+
+    def to_chat(self) -> list[dict[str, str]]:
+        """Render as chat messages for instruction fine-tuning (SFT)."""
+        return [
+            *self.to_prompt_messages(),
             {"role": "assistant", "content": self.answer},
         ]
 

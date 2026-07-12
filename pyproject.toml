@@ -37,6 +37,9 @@ warn_unused_ignores = true
 # opaque Any whether or not they happen to be installed in the dev venv, so the
 # type check is identical on a base-only CI box and a machine with the extras.
 [[tool.mypy.overrides]]
-module = ["torch", "transformers", "peft", "trl", "bitsandbytes", "mlx.*", "mlx_lm", "datasets"]
+module = [
+    "torch", "transformers", "transformers.*", "peft", "peft.*", "trl",
+    "bitsandbytes", "mlx.*", "mlx_lm", "mlx_lm.*", "datasets",
+]
 ignore_missing_imports = true
 follow_imports = "skip"
