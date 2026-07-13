@@ -39,7 +39,7 @@ warn_unused_ignores = true
 [[tool.mypy.overrides]]
 module = [
     "torch", "transformers", "transformers.*", "peft", "peft.*", "trl",
-    "bitsandbytes", "mlx.*", "mlx_lm", "mlx_lm.*", "datasets", "llama_cpp",
+    "bitsandbytes", "mlx.*", "mlx_lm", "mlx_lm.*", "datasets", "llama_cpp", "vllm",
 ]
 ignore_missing_imports = true
 follow_imports = "skip"
