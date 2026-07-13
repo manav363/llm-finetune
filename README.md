@@ -9,7 +9,7 @@ is the treatment, evaluation is the trial.
 > AI Eval Pipeline (Project #1) so "the fine-tune improved quality" is a statistical claim with
 > a confidence interval, not a gut call.
 
-## Status: M5 — serving ✅ (M0 ✅ · M1 ✅ · M2 ✅ · M3 ✅ · M4 ✅)
+## Status: complete — M0–M6 ✅
 
 The full pipeline runs **offline** on a bundled sample dataset via a **mock backend** — no GPU,
 no model download. Data prep does lexical near-duplicate removal and emits a stats report.
@@ -24,7 +24,11 @@ quantized model to prove quality didn't collapse versus merged fp16 — gated by
 tolerance (`reports/export_report.md`). M5 serves the result behind a **FastAPI** `POST /generate`
 endpoint with a singleton model load and a backend-aware engine (vLLM/transformers on CUDA,
 MLX or llama.cpp/GGUF on Mac), packaged in a **Dockerfile** that builds and runs the offline
-mock engine with no GPU.
+mock engine with no GPU. M6 makes the whole thing **reproducible**: a deterministic `run_id`
+derived from the config + data version, an append-only run registry, a generated
+[`MODEL_CARD.md`](MODEL_CARD.md) assembled from the committed artifacts, and an **eval-as-CI
+gate** (GitHub Actions) that fails the build if a candidate regresses versus the promoted
+eval report.
 
 > The judge is currently a lexical **placeholder** for the AI Eval Pipeline's validated judge
 > (Project #1, not built yet); the validated judge + final p-value land when that project's M5
@@ -87,6 +91,22 @@ docker run -p 8000:8000 llm-finetune
 #   docker run -p 8000:8000 -e LLM_FINETUNE_ENGINE=mlx llm-finetune
 ```
 
+### Reproducibility (M6)
+
+Every run is named by a deterministic `run_id` = hash(reproducibility-relevant config +
+content hash of the data). Same inputs → same id on any machine, so a cold clone can
+recompute the id in the registry and know it's the same run.
+
+```bash
+python -m llm_finetune.repro.build          # register the run + (re)write MODEL_CARD.md
+python -m llm_finetune.repro.gate \          # eval-as-CI: exit 1 if candidate regresses
+  --candidate reports/eval_report.json --promoted reports/eval_report.json
+```
+
+[`MODEL_CARD.md`](MODEL_CARD.md) is generated from the committed eval/export JSON (never
+hand-written), and the same gate runs in CI (`.github/workflows/ci.yml`) to block a fine-tune
+that regresses versus the promoted checkpoint.
+
 For real training, also install one backend's extras:
 
 ```bash
@@ -135,6 +155,11 @@ src/llm_finetune/
   serve/backend_cuda.py      # vLLM (preferred) / transformers serving
   serve/backend_gguf.py      # llama.cpp serving of the M4 GGUF artifact
   serve/api.py               # FastAPI app: POST /generate, GET /health
+  repro/version.py           # deterministic data_version + run_id (reproducible from config)
+  repro/registry.py          # append-only run registry (RunRecord, upsert by run_id)
+  repro/model_card.py        # assemble MODEL_CARD.md from committed artifacts
+  repro/gate.py              # eval-as-CI gate: regression vs promoted -> non-zero exit
+  repro/build.py             # register the run + (re)write the model card
   pipeline.py                # prepare -> split -> train entrypoint
 tests/                       # config, schema, data pipeline, dry-run acceptance
 ```
@@ -147,4 +172,4 @@ tests/                       # config, schema, data pipeline, dry-run acceptance
 - **M3 — Evaluation** ✅ base vs fine-tuned on held-out test: intrinsic metrics + judge + paired-bootstrap CIs; honest committed report (validated judge + p-value pending eval-pipeline M5).
 - **M4 — Optimize/export** ✅ merge LoRA into base, quantize to a single GGUF (size + quant recorded), and a tolerance-gated sanity check that re-runs the M3 eval on the quantized model. Mock path runs fully offline; real merge/quantize on `mlx` (mlx-lm fuse) and `cuda` (peft + llama.cpp) behind runtime guards.
 - **M5 — Serving** ✅ FastAPI `POST /generate` with a singleton model load and a backend-aware engine (vLLM→transformers on CUDA, mlx-lm or llama.cpp/GGUF on Mac) + Dockerfile. Mock engine serves offline; real engines behind runtime guards.
-- **M6 — Reproducibility** model card, run registry, eval-as-CI gate.
+- **M6 — Reproducibility** ✅ deterministic `run_id` (config + data version), append-only run registry, generated [`MODEL_CARD.md`](MODEL_CARD.md), and an eval-as-CI gate wired into GitHub Actions that fails the build on a regression vs the promoted eval report.

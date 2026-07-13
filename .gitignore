@@ -10,6 +10,7 @@ venv/
 
 # Project outputs / data (keep sample, ignore generated)
 outputs/
+reports_ci/
 data/raw/
 data/processed/
 !data/sample/

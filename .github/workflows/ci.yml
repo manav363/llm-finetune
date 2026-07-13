@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality-and-eval-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install (base deps only — everything runs on the mock backend)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/base.txt
+          pip install -e .
+
+      - name: Lint + type-check
+        run: |
+          ruff check .
+          mypy src
+
+      - name: Tests
+        run: pytest -q
+
+      - name: Regenerate eval report (mock, deterministic)
+        run: |
+          python -m llm_finetune.data.prepare --config config/qa_domain.yaml
+          python -m llm_finetune.data.split   --config config/qa_domain.yaml
+          python -m llm_finetune.train.train   --config config/qa_domain.yaml
+          python -m llm_finetune.eval.evaluate --mode mock --out-dir reports_ci
+
+      - name: Eval-as-CI gate — fail the build on a regression vs the promoted report
+        run: |
+          python -m llm_finetune.repro.gate \
+            --candidate reports_ci/eval_report.json \
+            --promoted  reports/eval_report.json
