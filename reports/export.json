@@ -1,0 +1,20 @@
+{
+  "backend": "mock",
+  "created_at": "2026-07-13T06:34:30.694285+00:00",
+  "seed": 42,
+  "base_model": "Qwen/Qwen2.5-3B-Instruct",
+  "adapter": "outputs/adapter",
+  "merged_dir": "outputs/merged",
+  "gguf_path": "outputs/model.gguf",
+  "quant": "Q4_K_M",
+  "size_bytes": 268,
+  "size_human": "268 B",
+  "versions": {
+    "torch": "not-installed",
+    "transformers": "5.13.1",
+    "peft": "not-installed",
+    "mlx-lm": "0.31.3",
+    "llama-cpp-python": "not-installed"
+  },
+  "note": "mock export: wrote merged.json marker + placeholder GGUF, no quantization"
+}

@@ -1,0 +1,10 @@
+{
+  "n_items": 3,
+  "quant": "Q4_K_M",
+  "tolerance": 0.05,
+  "merged_mean": 0.6552519426082645,
+  "quantized_mean": 0.6552519426082645,
+  "delta": 0.0,
+  "passed": true,
+  "verdict": "PASS \u2014 quantized (Q4_K_M) holds quality within tolerance: \u0394 +0.000 \u2265 -0.050"
+}

@@ -39,3 +39,17 @@ train:
 wandb:
   enabled: false
   project: llm-finetune
+
+# M4 optimize/export. Merge the winning LoRA into the base weights, quantize to
+# a single GGUF artifact, and sanity-check that quantization doesn't collapse
+# quality versus the merged fp16 model (a re-run of the M3 eval on a test slice).
+quantize:
+  merged_dir: outputs/merged      # merged fp16 weights (LoRA fused into base)
+  gguf_path: outputs/model.gguf   # the single quantized artifact
+  quant: Q4_K_M                   # llama.cpp quant level (recorded in export.json)
+  # Max headline-quality drop the quantized model may show vs merged fp16.
+  # Exceeding it fails the sanity check.
+  tolerance: 0.05
+  # Local llama.cpp checkout for the CUDA/HF GGUF conversion step. null -> look
+  # on PATH. Unused by the mlx exporter (mlx-lm exports GGUF itself) and mock.
+  llama_cpp_dir: null

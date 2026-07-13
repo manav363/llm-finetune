@@ -173,6 +173,48 @@ class CudaGenerator:
         return results
 
 
+class GgufGenerator:
+    """Greedy generation from a quantized GGUF file via llama-cpp-python.
+
+    Used by the M4 sanity check to score the quantized artifact. The runtime is
+    an optional extra, so the import is deferred and guarded; without it,
+    `generate` raises `BackendUnavailable`.
+    """
+
+    def __init__(
+        self,
+        gguf_path: Path,
+        *,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        name: str | None = None,
+    ) -> None:
+        self.gguf_path = gguf_path
+        self.max_tokens = max_tokens
+        self.name = name or "gguf-quantized"
+
+    def generate(self, examples: list[QAExample]) -> list[Generation]:
+        try:
+            from llama_cpp import Llama
+        except ImportError as exc:  # pragma: no cover - env-dependent
+            raise BackendUnavailable(
+                "GGUF generation requires llama-cpp-python: pip install llama-cpp-python"
+            ) from exc
+
+        llm = Llama(  # pragma: no cover - env-dependent
+            model_path=str(self.gguf_path), n_ctx=0, verbose=False, logits_all=False
+        )
+        results: list[Generation] = []  # pragma: no cover - env-dependent
+        for ex in examples:
+            out = llm.create_chat_completion(
+                messages=ex.to_prompt_messages(),
+                temperature=GREEDY_TEMPERATURE,
+                max_tokens=self.max_tokens,
+            )
+            text = out["choices"][0]["message"]["content"] or ""
+            results.append(_to_generation(ex, text))
+        return results
+
+
 def write_generations(generations: list[Generation], path: str | Path) -> Path:
     """Snapshot generations to JSONL (one object per line)."""
     out = Path(path)

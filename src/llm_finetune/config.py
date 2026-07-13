@@ -64,6 +64,32 @@ class WandbConfig:
 
 
 @dataclass(frozen=True)
+class QuantizeConfig:
+    """M4 optimize/export settings: where merged + quantized artifacts land,
+    the llama.cpp quant level, and the max quality drop the quantized model may
+    show versus the merged fp16 model in the sanity check."""
+
+    merged_dir: Path
+    gguf_path: Path
+    quant: str
+    tolerance: float
+    # Path to a local llama.cpp checkout for the CUDA/HF GGUF-conversion step.
+    # None -> discover its scripts/binaries on PATH. Ignored by the MLX exporter
+    # (mlx-lm fuses + exports GGUF itself) and the offline mock exporter.
+    llama_cpp_dir: Path | None = None
+
+
+def _default_quantize() -> QuantizeConfig:
+    return QuantizeConfig(
+        merged_dir=Path("outputs/merged"),
+        gguf_path=Path("outputs/model.gguf"),
+        quant="Q4_K_M",
+        tolerance=0.05,
+        llama_cpp_dir=None,
+    )
+
+
+@dataclass(frozen=True)
 class Config:
     seed: int
     backend: str
@@ -72,6 +98,7 @@ class Config:
     lora: LoraConfig
     train: TrainConfig
     wandb: WandbConfig = field(default_factory=lambda: WandbConfig(False, "llm-finetune"))
+    quantize: QuantizeConfig = field(default_factory=_default_quantize)
 
 
 def _require(mapping: dict[str, Any], key: str, section: str) -> Any:
@@ -113,6 +140,8 @@ def parse_config(raw: dict[str, Any]) -> Config:
     if not 0.0 < near_dup_threshold <= 1.0:
         raise ConfigError("data.near_dup_threshold must be in (0, 1]")
 
+    quantize = _parse_quantize(raw.get("quantize", {}))
+
     return Config(
         seed=int(_require(raw, "seed", "<root>")),
         backend=str(backend),
@@ -146,6 +175,25 @@ def parse_config(raw: dict[str, Any]) -> Config:
             enabled=bool(wandb_raw.get("enabled", False)),
             project=str(wandb_raw.get("project", "llm-finetune")),
         ),
+        quantize=quantize,
+    )
+
+
+def _parse_quantize(raw: Any) -> QuantizeConfig:
+    """Parse the optional `quantize` section, filling M4 defaults."""
+    if not isinstance(raw, dict):
+        raise ConfigError("'quantize' must be a mapping")
+    default = _default_quantize()
+    tolerance = float(raw.get("tolerance", default.tolerance))
+    if not 0.0 <= tolerance <= 1.0:
+        raise ConfigError("quantize.tolerance must be in [0, 1]")
+    llama_cpp_dir = raw.get("llama_cpp_dir")
+    return QuantizeConfig(
+        merged_dir=Path(raw.get("merged_dir", default.merged_dir)),
+        gguf_path=Path(raw.get("gguf_path", default.gguf_path)),
+        quant=str(raw.get("quant", default.quant)),
+        tolerance=tolerance,
+        llama_cpp_dir=Path(llama_cpp_dir) if llama_cpp_dir else None,
     )
 
 
