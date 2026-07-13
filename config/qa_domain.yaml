@@ -18,7 +18,13 @@ data:
   test_frac: 0.15
   # Lexical near-duplicate threshold (Jaccard over question+answer tokens).
   # A record is dropped when it is >= this similar to an already-kept record.
+  # NOTE: lexical only — semantic paraphrases with low token overlap survive and
+  # can cross train/test. A real corpus should add semantic/near-dup controls.
   near_dup_threshold: 0.85
+  # Split within each category so the category mix is preserved across
+  # train/val/test (narrows category-imbalance leakage). Needs enough items per
+  # category; off by default for the tiny sample.
+  stratify_splits: false
 
 lora:
   r: 16

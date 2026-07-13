@@ -37,6 +37,13 @@ def config_fingerprint(config: Config) -> dict[str, object]:
 
     Two configs with the same fingerprint should produce the same model, so only
     inputs that affect the result are included — not where artifacts are written.
+    This covers the split controls (frac/seed/dedup/stratify) because they change
+    which items land in train vs. test and therefore the measured result.
+
+    Not captured here (so not part of the deterministic id): dependency and base-
+    model *revisions*. Two runs with the same fingerprint but different library or
+    model-weight versions can still differ; `registry.py` records the installed
+    versions alongside each run so that gap is at least visible.
     """
     return {
         "seed": config.seed,
@@ -55,6 +62,12 @@ def config_fingerprint(config: Config) -> dict[str, object]:
             "grad_accum": config.train.grad_accum,
             "learning_rate": config.train.learning_rate,
             "max_steps": config.train.max_steps,
+        },
+        "split": {
+            "val_frac": config.data.val_frac,
+            "test_frac": config.data.test_frac,
+            "near_dup_threshold": config.data.near_dup_threshold,
+            "stratify_splits": config.data.stratify_splits,
         },
     }
 

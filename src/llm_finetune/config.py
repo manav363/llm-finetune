@@ -33,6 +33,7 @@ class DataConfig:
     val_frac: float
     test_frac: float
     near_dup_threshold: float = 0.85
+    stratify_splits: bool = False
 
     @property
     def train_frac(self) -> float:
@@ -107,6 +108,45 @@ def _require(mapping: dict[str, Any], key: str, section: str) -> Any:
     return mapping[key]
 
 
+def _positive_int(mapping: dict[str, Any], key: str, section: str) -> int:
+    value = int(_require(mapping, key, section))
+    if value <= 0:
+        raise ConfigError(f"'{section}.{key}' must be a positive integer, got {value}")
+    return value
+
+
+def _positive_float(mapping: dict[str, Any], key: str, section: str) -> float:
+    value = float(_require(mapping, key, section))
+    if value <= 0.0:
+        raise ConfigError(f"'{section}.{key}' must be > 0, got {value}")
+    return value
+
+
+def _nonneg_int(mapping: dict[str, Any], key: str, default: int = 0) -> int:
+    value = int(mapping.get(key, default))
+    if value < 0:
+        raise ConfigError(f"'{key}' must be >= 0, got {value}")
+    return value
+
+
+def _unit_interval(mapping: dict[str, Any], key: str, section: str) -> float:
+    value = float(_require(mapping, key, section))
+    if not 0.0 <= value < 1.0:
+        raise ConfigError(f"'{section}.{key}' must be in [0, 1), got {value}")
+    return value
+
+
+def _target_modules(mapping: dict[str, Any]) -> tuple[str, ...]:
+    raw = _require(mapping, "target_modules", "lora")
+    # A bare string would silently iterate into individual characters — reject it.
+    if isinstance(raw, str) or not isinstance(raw, list | tuple):
+        raise ConfigError("'lora.target_modules' must be a list of module names")
+    modules = [str(m) for m in raw]
+    if not modules:
+        raise ConfigError("'lora.target_modules' must be non-empty")
+    return tuple(modules)
+
+
 def _as_section(raw: dict[str, Any], key: str) -> dict[str, Any]:
     value = _require(raw, key, "<root>")
     if not isinstance(value, dict):
@@ -156,20 +196,21 @@ def parse_config(raw: dict[str, Any]) -> Config:
             val_frac=val_frac,
             test_frac=test_frac,
             near_dup_threshold=near_dup_threshold,
+            stratify_splits=bool(data_raw.get("stratify_splits", False)),
         ),
         lora=LoraConfig(
-            r=int(_require(lora_raw, "r", "lora")),
-            alpha=int(_require(lora_raw, "alpha", "lora")),
-            dropout=float(_require(lora_raw, "dropout", "lora")),
-            target_modules=tuple(_require(lora_raw, "target_modules", "lora")),
+            r=_positive_int(lora_raw, "r", "lora"),
+            alpha=_positive_int(lora_raw, "alpha", "lora"),
+            dropout=_unit_interval(lora_raw, "dropout", "lora"),
+            target_modules=_target_modules(lora_raw),
         ),
         train=TrainConfig(
-            epochs=int(_require(train_raw, "epochs", "train")),
-            batch_size=int(_require(train_raw, "batch_size", "train")),
-            grad_accum=int(_require(train_raw, "grad_accum", "train")),
-            learning_rate=float(_require(train_raw, "learning_rate", "train")),
+            epochs=_positive_int(train_raw, "epochs", "train"),
+            batch_size=_positive_int(train_raw, "batch_size", "train"),
+            grad_accum=_positive_int(train_raw, "grad_accum", "train"),
+            learning_rate=_positive_float(train_raw, "learning_rate", "train"),
             output_dir=Path(_require(train_raw, "output_dir", "train")),
-            max_steps=int(train_raw.get("max_steps", 0)),
+            max_steps=_nonneg_int(train_raw, "max_steps"),
         ),
         wandb=WandbConfig(
             enabled=bool(wandb_raw.get("enabled", False)),

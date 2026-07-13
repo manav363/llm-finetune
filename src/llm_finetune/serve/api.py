@@ -15,6 +15,7 @@ Run:
 
 from __future__ import annotations
 
+import logging
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -30,10 +31,21 @@ from llm_finetune.serve.registry import select_engine
 DEFAULT_CONFIG = "config/qa_domain.yaml"
 DEFAULT_ENGINE = "mock"
 
+# Request-size guards: bound the prompt so a caller can't submit an unbounded
+# payload that blows up tokenization / memory. Generous but finite.
+MAX_QUESTION_CHARS = 4_000
+MAX_CONTEXT_CHARS = 20_000
+
+logger = logging.getLogger("llm_finetune.serve")
+
 
 class GenerateRequest(BaseModel):
-    question: str = Field(..., min_length=1, description="Domain question to answer.")
-    context: str = Field("", description="Optional grounding context.")
+    question: str = Field(
+        ..., min_length=1, max_length=MAX_QUESTION_CHARS, description="Domain question to answer."
+    )
+    context: str = Field(
+        "", max_length=MAX_CONTEXT_CHARS, description="Optional grounding context."
+    )
     max_tokens: int = Field(DEFAULT_MAX_TOKENS, gt=0, le=4096)
     temperature: float = Field(GREEDY_TEMPERATURE, ge=0.0, le=2.0)
 
@@ -90,8 +102,13 @@ def create_app(engine: InferenceEngine | None = None) -> FastAPI:
                 max_tokens=req.max_tokens,
                 temperature=req.temperature,
             )
-        except Exception as exc:  # surface engine failures as a 503, not a 500
-            raise HTTPException(status_code=503, detail=f"generation failed: {exc}") from exc
+        except Exception as exc:
+            # Log the detail server-side; return a generic message so raw backend
+            # exception text (paths, model internals) never reaches the caller.
+            logger.exception("generation failed on engine %s", resolved.name)
+            raise HTTPException(
+                status_code=503, detail="generation failed; see server logs"
+            ) from exc
         return GenerateResponse(answer=answer, engine=resolved.name)
 
     return app

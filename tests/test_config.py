@@ -88,3 +88,51 @@ def test_rejects_impossible_split_fractions():
     raw["data"]["test_frac"] = 0.6
     with pytest.raises(ConfigError):
         parse_config(raw)
+
+
+@pytest.mark.parametrize(
+    "section,key,bad",
+    [
+        ("train", "epochs", 0),
+        ("train", "batch_size", 0),
+        ("train", "grad_accum", -1),
+        ("train", "learning_rate", 0.0),
+        ("train", "max_steps", -5),
+        ("lora", "r", 0),
+        ("lora", "alpha", -3),
+    ],
+)
+def test_rejects_nonpositive_training_values(section, key, bad):
+    raw = _valid_raw()
+    raw[section][key] = bad
+    with pytest.raises(ConfigError):
+        parse_config(raw)
+
+
+def test_rejects_out_of_range_dropout():
+    raw = _valid_raw()
+    raw["lora"]["dropout"] = 1.0
+    with pytest.raises(ConfigError):
+        parse_config(raw)
+
+
+def test_rejects_string_target_modules():
+    # A bare string would silently become individual characters ('q','_',...).
+    raw = _valid_raw()
+    raw["lora"]["target_modules"] = "q_proj"
+    with pytest.raises(ConfigError):
+        parse_config(raw)
+
+
+def test_rejects_empty_target_modules():
+    raw = _valid_raw()
+    raw["lora"]["target_modules"] = []
+    with pytest.raises(ConfigError):
+        parse_config(raw)
+
+
+def test_stratify_splits_defaults_false_and_reads_true():
+    assert parse_config(_valid_raw()).data.stratify_splits is False
+    raw = _valid_raw()
+    raw["data"]["stratify_splits"] = True
+    assert parse_config(raw).data.stratify_splits is True

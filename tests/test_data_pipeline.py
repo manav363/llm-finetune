@@ -118,6 +118,36 @@ def test_split_rejects_too_few_examples():
         split_examples(_examples(3), val_frac=0.15, test_frac=0.15, seed=1)
 
 
+def _categorized(per_category: int, categories: tuple[str, ...]) -> list[QAExample]:
+    out: list[QAExample] = []
+    for cat in categories:
+        for i in range(per_category):
+            out.append(
+                QAExample(id=f"{cat}-{i}", question=f"q{i}", answer=f"a{i}", category=cat)
+            )
+    return out
+
+
+def test_stratified_split_preserves_categories_across_splits():
+    # 3 categories x 8 items; each split should see every category.
+    exs = _categorized(8, ("api", "billing", "security"))
+    splits = split_examples(
+        exs, val_frac=0.25, test_frac=0.25, seed=3, stratify_by_category=True
+    )
+    assert_no_leakage(splits)
+    for part in (splits.train, splits.val, splits.test):
+        assert {e.category for e in part} == {"api", "billing", "security"}
+    total = splits.train + splits.val + splits.test
+    assert {e.id for e in total} == {e.id for e in exs}
+
+
+def test_stratified_split_is_deterministic():
+    exs = _categorized(8, ("api", "billing", "security"))
+    a = split_examples(exs, val_frac=0.25, test_frac=0.25, seed=5, stratify_by_category=True)
+    b = split_examples(exs, val_frac=0.25, test_frac=0.25, seed=5, stratify_by_category=True)
+    assert [e.id for e in a.test] == [e.id for e in b.test]
+
+
 def test_write_splits_creates_three_files(tmp_path):
     splits = split_examples(_examples(20), val_frac=0.15, test_frac=0.15, seed=1)
     paths = write_splits(splits, tmp_path / "splits")

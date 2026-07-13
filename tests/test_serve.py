@@ -133,7 +133,15 @@ def test_generate_surfaces_engine_failure_as_503():
     with TestClient(create_app(engine=BoomEngine())) as client:
         resp = client.post("/generate", json={"question": "hi"})
     assert resp.status_code == 503
-    assert "model exploded" in resp.json()["detail"]
+    # Raw backend exception text must NOT leak to the caller.
+    assert "model exploded" not in resp.json()["detail"]
+    assert "see server logs" in resp.json()["detail"]
+
+
+def test_generate_rejects_oversized_question():
+    with _client() as client:
+        resp = client.post("/generate", json={"question": "x" * 5000})
+    assert resp.status_code == 422
 
 
 # --- registry + guards ---------------------------------------------------

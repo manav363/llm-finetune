@@ -21,6 +21,11 @@ from llm_finetune.repro import version as ver
 DEFAULT_REGISTRY = Path("runs/registry.jsonl")
 
 
+# Libraries whose version affects a real training/serving run but which the
+# deterministic run_id does NOT pin — recorded so the gap is visible.
+_TRACKED_PACKAGES = ["torch", "transformers", "peft", "trl", "mlx-lm", "llama-cpp-python"]
+
+
 @dataclass(frozen=True)
 class RunRecord:
     run_id: str
@@ -32,6 +37,7 @@ class RunRecord:
     config_fingerprint: dict[str, object]
     artifacts: dict[str, str] = field(default_factory=dict)
     eval_summary: dict[str, object] = field(default_factory=dict)
+    versions: dict[str, str] = field(default_factory=dict)
     note: str = ""
 
     def to_dict(self) -> dict[str, object]:
@@ -62,6 +68,8 @@ def build_record(
     note: str = "",
 ) -> RunRecord:
     """Assemble a RunRecord (pure — no I/O beyond reading the git commit)."""
+    from llm_finetune.train.backend_common import library_versions
+
     return RunRecord(
         run_id=ver.run_id(config, data_version),
         created_at=datetime.now(timezone.utc).isoformat(),
@@ -72,6 +80,7 @@ def build_record(
         config_fingerprint=ver.config_fingerprint(config),
         artifacts=artifacts or {},
         eval_summary=eval_summary or {},
+        versions=library_versions(_TRACKED_PACKAGES),
         note=note,
     )
 

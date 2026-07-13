@@ -16,9 +16,11 @@ the dataset sizes this pipeline targets.
 
 from __future__ import annotations
 
+import argparse
 import re
 from pathlib import Path
 
+from llm_finetune.config import load_config
 from llm_finetune.schema import QAExample, load_jsonl, write_jsonl
 
 _WS = re.compile(r"\s+")
@@ -108,3 +110,27 @@ def prepare(
     out.parent.mkdir(parents=True, exist_ok=True)
     write_jsonl(str(out), deduped)
     return deduped
+
+
+def main() -> None:
+    """CLI: clean + dedup the raw dataset and write processed JSONL + stats."""
+    from llm_finetune.data.stats import compute_stats, write_report
+
+    parser = argparse.ArgumentParser(description="Prepare the processed dataset.")
+    parser.add_argument("--config", default="config/qa_domain.yaml")
+    args = parser.parse_args()
+
+    config = load_config(args.config)
+    examples = prepare(
+        config.data.raw_path,
+        config.data.processed_path,
+        near_dup_threshold=config.data.near_dup_threshold,
+    )
+    stats_path = config.data.processed_path.parent / "stats.json"
+    write_report(compute_stats(examples), stats_path)
+    print(f"prepared {len(examples)} examples -> {config.data.processed_path}")
+    print(f"stats -> {stats_path}")
+
+
+if __name__ == "__main__":
+    main()

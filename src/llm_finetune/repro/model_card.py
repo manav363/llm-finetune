@@ -30,7 +30,7 @@ def _load_json(path: str | Path) -> dict[str, object] | None:
 def _fmt(value: object, spec: str = "") -> str:
     if value is None:
         return "—"
-    if spec and isinstance(value, (int, float)):
+    if spec and isinstance(value, int | float):
         return format(value, spec)
     return str(value)
 
@@ -95,8 +95,15 @@ def _limitations_section(eval_report: dict[str, object] | None) -> list[str]:
         "",
         "- **Judge is a lexical placeholder**, not the AI Eval Pipeline's validated "
         "judge; the significance verdict is preliminary until that lands.",
-        "- **Small synthetic sample** — the bundled dataset is a 20-item demo corpus, "
-        "not a real domain corpus; deltas are illustrative of the pipeline, not a product claim.",
+        "- **Small synthetic sample** — the bundled dataset is a 20-item demo corpus "
+        "(a 3-item test split); deltas and bootstrap CIs demonstrate the *pipeline*, "
+        "not a real quality improvement. Do not read them as a product claim.",
+        "- **Leakage control is lexical/id-level.** Dedup uses token-Jaccard and the "
+        "split guards duplicate ids (optionally category-stratified); semantic "
+        "paraphrases and shared-source records can still cross train/test.",
+        "- **The run_id does not pin dependency or base-model *revisions*** — only the "
+        "config + data content. Installed library versions are recorded per run (see the "
+        "registry), but a real hardware run can differ across package/model versions.",
         "- **Backends:** real QLoRA/MLX training, GGUF export, and non-mock serving are "
         "implemented behind runtime guards but exercised on hardware, not in CI.",
     ]

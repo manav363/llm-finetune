@@ -4,8 +4,8 @@
 
 ## Run
 
-- **Run id:** `738b0c490cd9` (deterministic from config + data version)
-- **Git commit:** `d0718e47a058de3666efe166b6376ce3938dd853`
+- **Run id:** `eecd895e0548` (deterministic from config + data version)
+- **Git commit:** `4da81f5513dbbeb0cb3f2a81b7c8a88551e8086d`
 - **Backend:** `mock`
 - **Base model:** `Qwen/Qwen2.5-3B-Instruct` (max_seq_len 1024)
 
@@ -41,7 +41,9 @@
 ## Known limitations
 
 - **Judge is a lexical placeholder**, not the AI Eval Pipeline's validated judge; the significance verdict is preliminary until that lands.
-- **Small synthetic sample** — the bundled dataset is a 20-item demo corpus, not a real domain corpus; deltas are illustrative of the pipeline, not a product claim.
+- **Small synthetic sample** — the bundled dataset is a 20-item demo corpus (a 3-item test split); deltas and bootstrap CIs demonstrate the *pipeline*, not a real quality improvement. Do not read them as a product claim.
+- **Leakage control is lexical/id-level.** Dedup uses token-Jaccard and the split guards duplicate ids (optionally category-stratified); semantic paraphrases and shared-source records can still cross train/test.
+- **The run_id does not pin dependency or base-model *revisions*** — only the config + data content. Installed library versions are recorded per run (see the registry), but a real hardware run can differ across package/model versions.
 - **Backends:** real QLoRA/MLX training, GGUF export, and non-mock serving are implemented behind runtime guards but exercised on hardware, not in CI.
 
 ## Reproduce
@@ -54,4 +56,4 @@ python -m llm_finetune.quantize.export --mode mock
 python -m llm_finetune.repro.build               # re-registers the run + this card
 ```
 
-The `run_id` above is recomputed from the config + data version, so a cold clone that regenerates it and gets `738b0c490cd9` is looking at the same run.
+The `run_id` above is recomputed from the config + data version, so a cold clone that regenerates it and gets `eecd895e0548` is looking at the same run.

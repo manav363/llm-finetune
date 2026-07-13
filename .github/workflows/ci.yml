@@ -29,11 +29,12 @@ jobs:
       - name: Tests
         run: pytest -q
 
-      - name: Regenerate eval report (mock, deterministic)
+      - name: Regenerate splits + eval report from the sample (mock, deterministic)
         run: |
           python -m llm_finetune.data.prepare --config config/qa_domain.yaml
           python -m llm_finetune.data.split   --config config/qa_domain.yaml
           python -m llm_finetune.train.train   --config config/qa_domain.yaml
+          test -f data/processed/splits/test.jsonl  # fail loudly if the split step no-oped
           python -m llm_finetune.eval.evaluate --mode mock --out-dir reports_ci
 
       - name: Eval-as-CI gate — fail the build on a regression vs the promoted report

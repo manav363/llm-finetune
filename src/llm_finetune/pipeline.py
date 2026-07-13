@@ -38,6 +38,7 @@ def run_pipeline(config: Config) -> TrainResult:
         val_frac=config.data.val_frac,
         test_frac=config.data.test_frac,
         seed=config.seed,
+        stratify_by_category=config.data.stratify_splits,
     )
     paths = write_splits(splits, config.data.splits_dir)
     return run_training(config, paths["train"], paths["val"])
