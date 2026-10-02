@@ -1,38 +1,47 @@
 # LLM Fine-Tune — Domain Q&A
 
-Fine-tune an open-source LLM on a custom **domain Q&A** dataset with parameter-efficient
-**LoRA / QLoRA**, then **prove it beat the base model** on a held-out test set — the fine-tune
-is the treatment, evaluation is the trial.
+[![CI](https://img.shields.io/github/actions/workflow/status/manav363/llm-finetune/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/manav363/llm-finetune/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white)
+[![License](https://img.shields.io/badge/license-MIT-00D4AA?style=flat-square)](LICENSE)
 
-> Project #2 of a 7-project AI build sequence (Eval → **Fine-Tune** → Knowledge Graph →
-> Secure RAG → Agent+Audit → Multi-Agent → Research Team). It's designed to be scored by the
-> AI Eval Pipeline (Project #1) so "the fine-tune improved quality" is a statistical claim with
-> a confidence interval, not a gut call.
+A fine-tuning **pipeline** for a domain question-answering model: data preparation,
+parameter-efficient training (**LoRA on Apple Silicon via MLX**, **QLoRA on NVIDIA via
+trl/peft**), a statistical base-vs-fine-tuned evaluation, GGUF export, a FastAPI serving layer,
+and checks that a run can be reproduced. Every stage also runs offline on a bundled sample
+through a **mock backend**, so the whole thing can be cloned and exercised with no GPU and no
+model download.
 
-## Status: complete — M0–M6 ✅
+The design principle is that "the fine-tune helped" should be a *measured* claim with a
+confidence interval, and that the report is allowed to say it did not.
 
-The full pipeline runs **offline** on a bundled sample dataset via a **mock backend** — no GPU,
-no model download. Data prep does lexical near-duplicate removal and emits a stats report.
-Real training is implemented on both backends: **QLoRA (4-bit) on CUDA** via `trl` and **LoRA
-on Apple Silicon** via `mlx-lm` (a smoke train of Qwen2.5-3B produced a real MLX adapter +
-`run.json`). Evaluation compares base vs fine-tuned on the held-out test set with intrinsic
-metrics, a judge (correctness/faithfulness/relevance), and **paired-bootstrap CIs** — and writes
-an **honest report that can say the fine-tune did _not_ win** (`reports/eval_report.md`).
-M4 then merges the winning LoRA into the base weights, quantizes to a single **GGUF**
-artifact (recording its size + quant level), and **re-runs a slice of the M3 eval** on the
-quantized model to prove quality didn't collapse versus merged fp16 — gated by a configurable
-tolerance (`reports/export_report.md`). M5 serves the result behind a **FastAPI** `POST /generate`
-endpoint with a singleton model load and a backend-aware engine (vLLM/transformers on CUDA,
-MLX or llama.cpp/GGUF on Mac), packaged in a **Dockerfile** that builds and runs the offline
-mock engine with no GPU. M6 makes the whole thing **reproducible**: a deterministic `run_id`
-derived from the config + data version, an append-only run registry, a generated
-[`MODEL_CARD.md`](MODEL_CARD.md) assembled from the committed artifacts, and an **eval-as-CI
-gate** (GitHub Actions) that fails the build if a candidate regresses versus the promoted
-eval report.
+## What this repository does and does not show
 
-> The judge is currently a lexical **placeholder** for the AI Eval Pipeline's validated judge
-> (Project #1, not built yet); the validated judge + final p-value land when that project's M5
-> does. Deltas and CIs are real; the significance verdict is flagged preliminary until then.
+| Stage | State | Evidence in this repo |
+|---|---|---|
+| Data prep: cleaning, near-duplicate removal, seeded leak-safe split, stats report | Implemented | Unit tests, run in CI |
+| Training, MLX LoRA | Implemented, **run once as a smoke train** (Qwen2.5-3B on a Mac) | The resulting adapter and `run.json` were not committed (weights are git-ignored) |
+| Training, CUDA QLoRA | Implemented behind runtime guards | **No recorded GPU run** in the repository |
+| Evaluation: intrinsic metrics, judge, paired-bootstrap CIs | Implemented | Unit tests; one committed real-model report (below) |
+| Export: merge LoRA, quantize to GGUF, tolerance-gated sanity check | Implemented | Mock path tested in CI; the committed `reports/export.json` is a **mock placeholder** (a 268-byte marker file, not a quantized model) |
+| Serving: FastAPI `POST /generate`, `GET /health` | Implemented | Mock engine tested in CI; real engines (MLX, CUDA/vLLM, llama.cpp) not exercised in CI |
+| Reproducibility: deterministic `run_id`, run registry, generated model card, eval gate | Implemented | Unit tests; gate runs in CI |
+
+### The committed result
+
+`reports/eval_report.md` compares base `Qwen/Qwen2.5-3B-Instruct` against the smoke-trained
+adapter on a **3-item test split** from a **20-item synthetic dataset**. Every metric is
+identical for both models (Δ +0.000, 95% CI [+0.000, +0.000]) and the report's verdict is
+*"no measurable difference — cannot claim the fine-tune beat the base model"*.
+
+That is the honest state of the project: the pipeline works end to end, but **this repository
+does not demonstrate a model improvement**. Doing so needs a real dataset, a longer training
+run, and a validated judge. The 20-item sample exists to exercise the code, not to measure
+quality.
+
+> **About the judge.** The judge is currently a lexical **placeholder**. The reports refer to a
+> "validated judge" from an *AI Eval Pipeline*; that is a separate project which has not been
+> built yet. Until a validated judge is wired in, deltas and confidence intervals are real
+> computations but the significance verdict is flagged preliminary.
 
 ## The one switch that matters: `backend`
 
@@ -107,6 +116,12 @@ python -m llm_finetune.repro.gate \          # eval-as-CI: exit 1 if candidate r
 hand-written), and the same gate runs in CI (`.github/workflows/ci.yml`) to block a fine-tune
 that regresses versus the promoted checkpoint.
 
+One thing to know about that gate: in CI the candidate report is produced by the **mock**
+backend, so the gate there checks that the pipeline still produces a consistent report and that
+the comparison logic works. It becomes a quality gate when the candidate report comes from a
+real evaluation run (`python -m llm_finetune.eval.evaluate --mode mlx` or `cuda`) and is passed
+to `repro.gate` with the promoted report.
+
 For real training, also install one backend's extras:
 
 ```bash
@@ -161,7 +176,8 @@ src/llm_finetune/
   repro/gate.py              # eval-as-CI gate: regression vs promoted -> non-zero exit
   repro/build.py             # register the run + (re)write the model card
   pipeline.py                # prepare -> split -> train entrypoint
-tests/                       # config, schema, data pipeline, dry-run acceptance
+tests/                       # unit + end-to-end tests for every stage (all run offline)
+reports/                     # committed eval/export reports (see "The committed result")
 ```
 
 ## Roadmap
@@ -173,3 +189,19 @@ tests/                       # config, schema, data pipeline, dry-run acceptance
 - **M4 — Optimize/export** ✅ merge LoRA into base, quantize to a single GGUF (size + quant recorded), and a tolerance-gated sanity check that re-runs the M3 eval on the quantized model. Mock path runs fully offline; real merge/quantize on `mlx` (mlx-lm fuse) and `cuda` (peft + llama.cpp) behind runtime guards.
 - **M5 — Serving** ✅ FastAPI `POST /generate` with a singleton model load and a backend-aware engine (vLLM→transformers on CUDA, mlx-lm or llama.cpp/GGUF on Mac) + Dockerfile. Mock engine serves offline; real engines behind runtime guards.
 - **M6 — Reproducibility** ✅ deterministic `run_id` (config + data version), append-only run registry, generated [`MODEL_CARD.md`](MODEL_CARD.md), and an eval-as-CI gate wired into GitHub Actions that fails the build on a regression vs the promoted eval report.
+
+### Not done yet
+
+- A real (non-synthetic) dataset with a test split large enough for the confidence intervals to mean something.
+- A fine-tuning run long enough to move the metrics, evaluated with a validated judge.
+- A recorded CUDA/QLoRA run and a real (non-mock) GGUF export committed or published as a release asset.
+
+## How this was built
+
+This project was built with AI coding assistance (Claude). What can be checked without taking
+that on trust: the type-checked (`mypy --strict`) and linted source, the offline test suite
+(`pytest`), and the committed reports above, which say plainly what has and has not been shown.
+
+## License
+
+[MIT](LICENSE)
